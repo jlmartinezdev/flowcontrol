@@ -1,60 +1,81 @@
 <template>
   <v-app>
-    <v-app-bar
-      app
-      color="primary"
+    <v-navigation-drawer
+      color="blue-grey darken-3"
       dark
+      app
+      v-model="drawer"
+      :permanent="$vuetify.breakpoint.mdAndUp"
     >
+      <v-list-item>
+        <v-list-item-content>
+          <v-list-item-title class="text-h6"> CONTROLHIGH </v-list-item-title>
+          <v-list-item-subtitle> Control de Nivel </v-list-item-subtitle>
+        </v-list-item-content>
+      </v-list-item>
+
+      <v-divider></v-divider>
+
+      <v-list dense nav>
+        <v-list-item v-for="item in items" :key="item.title" link>
+          <v-list-item-icon>
+            <v-icon>{{ item.icon }}</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ item.title }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+    <v-app-bar color="primary" dark app>
+      <v-app-bar-nav-icon
+        @click.stop="drawer = !drawer"
+        class="hidden-md-and-up"
+      ></v-app-bar-nav-icon>
       <div class="d-flex align-center">
-        <v-img
-          alt="Vuetify Logo"
-          class="shrink mr-2"
-          contain
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-logo-dark.png"
-          transition="scale-transition"
-          width="40"
-        />
-
-        <v-img
-          alt="Vuetify Name"
-          class="shrink mt-1 hidden-sm-and-down"
-          contain
-          min-width="100"
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-name-dark.png"
-          width="100"
-        />
+        <span class="mr-2">CONTROL HIGH</span>
       </div>
-
-      <v-spacer></v-spacer>
-
-      <v-btn
-        href="https://github.com/vuetifyjs/vuetify/releases/latest"
-        target="_blank"
-        text
-      >
-        <span class="mr-2">Latest Release</span>
-        <v-icon>mdi-open-in-new</v-icon>
-      </v-btn>
     </v-app-bar>
+    <!-- v-if="isLoggedIn" -->
 
     <v-main>
-      <HelloWorld/>
+      <v-container fluid>
+        <router-view></router-view>
+        
+      </v-container>
     </v-main>
   </v-app>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld';
+//import HelloWorld from './components/HelloWorld';
+//import LayoutHome from './components/LayoutHome';
 
 export default {
-  name: 'App',
+  name: "App",
 
   components: {
-    HelloWorld,
+    
   },
 
   data: () => ({
-    //
+    items: [
+      { title: "Inicio", icon: "mdi-view-dashboard" },
+      { title: "Acerca de", icon: "mdi-information" },
+    ],
+    drawer: null,
   }),
+  /* computed: {
+    isLoggedIn: function() {
+      return this.$store.getters.isAuthenticated;
+    },
+  },
+  methods: {
+    async logout() {
+      await this.$store.dispatch("LogOut");
+      this.$router.push("/login");
+    },
+  }, */
 };
 </script>

@@ -24,3 +24,7 @@ npm run lint
 See [Configuration Reference](https://cli.vuejs.org/config/).
 
 ### https://www.coretechnologies.com/products/ServiceProtector/Services/MonitorEMQXBrokerWindowsService.html
+
+### Implementar API temperatura
+
+https://codepen.io/dlivingston/details/erVxqL
