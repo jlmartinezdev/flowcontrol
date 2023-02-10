@@ -1,33 +1,44 @@
 <template>
-  <v-card>
-    <v-card-title>Medidor de Nivel</v-card-title>
-    <v-card-text>
-      <v-row>
-        <v-col class="col-sm-12 col-md-6 col-12">
-          <v-layout class="d-flex justify-center">
-            <div id="target" style="width: 300px; height: 300px"></div>
-          </v-layout>
+  <div>
+    <v-card>
+      <v-card-title>Datos de Sensores</v-card-title>
+      <v-card-text>
+        <v-row>
+          <v-col class="col-sm-12 col-md-6 col-12">
+            <v-layout class="d-flex justify-center">
+              <div id="target" style="width: 300px; height: 300px"></div>
+            </v-layout>
 
-          <v-layout d-inline>
-            <div class="d-flex justify-center"><strong>Tanque 1</strong></div>
-            <div class="d-flex justify-center">ALTURA 300 CM</div>
-          </v-layout>
-        </v-col>
-        <v-col class="col-sm-12 col-md-6 col-12">
-          <v-layout d-inline>
-            <div><odometer :val="flujoAgua" /></div>
-            <br />
-            <div><odometer :val="pulsos" /></div>
-          </v-layout>
-        </v-col>
-      </v-row>
+            <v-layout d-inline>
+              <div class="d-flex justify-center">
+                <strong>{{ nombre_tanque }}</strong>
+              </div>
+              <div class="d-flex justify-center">ALTURA {{ altura }} CM</div>
+            </v-layout>
+          </v-col>
+          <v-col class="col-sm-12 col-md-6 col-12">
+            <v-layout d-inline>
+              <span class="text-h6">Flujo de Agua Litros</span>
+              <div>
+                <odometer :val="flujoAgua" />
+              </div>
+              <br />
+              <div><odometer :val="pulsos" /></div>
+            </v-layout>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+    <br>
+    <v-card>
+      <v-card-title>Historial Nivel de Agua</v-card-title>
       <v-row>
         <v-col class="col-12">
           <div id="chartdiv" class="chart"></div>
         </v-col>
       </v-row>
-    </v-card-text>
-  </v-card>
+    </v-card>
+  </div>
 </template>
 <script>
 import { CircularFluidMeter } from "fluid-meter";
@@ -49,6 +60,10 @@ export default {
     pulsos: 0,
     flujoAgua: 0,
     niveles: [],
+    isConectedMqtt: false,
+    isReceivedData: false,
+    altura: 190,
+    nombre_tanque: "TANQUE 1",
   }),
   methods: {
     showFluid: function () {
@@ -65,7 +80,8 @@ export default {
         backgroundColor: "#D9D9D9",
         borderWidth: 3,
         progressFormatter: (value) => {
-          return value.toFixed(0) + "%";
+          if (value > 0) return value.toFixed(0) + "%";
+          else return "Desconectado";
         },
       });
       this.medidor.progress = 0;
@@ -75,8 +91,12 @@ export default {
         clean: true, // retain session
         connectTimeout: 4000, // Timeout period
         // Authentication information
-        clientId: "emqx_test11",
-        username: "admin",
+        clientId:
+          "webclient_" +
+          Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1),
+        username: "webclient",
         password: "admin",
       };
 
@@ -100,16 +120,19 @@ export default {
       });
 
       client.on("message", (topic, message) => {
-        console.log(message.toString());
-        const lectura = JSON.parse(new TextDecoder("utf-8").decode(message));
-        this.flujoAgua = lectura.Litro;
-        this.pulsos = lectura.Pulsos;
-        const nivel = this.getNivel(lectura.distancia, 300);
-        this.pushData(nivel);
-        const p = this.getPromedio();
-        console.log(`Nivel: ${p}`);
-        if (p > 0) {
-          this.medidor.progress = p;
+         if (topic === "S_T_AGUA") {
+          this.isReceivedData = true;
+          console.log(message.toString());
+          const lectura = JSON.parse(new TextDecoder("utf-8").decode(message));
+          this.flujoAgua = lectura.Litro;
+          this.pulsos = lectura.Pulsos;
+          const nivel = this.getNivel(lectura.distancia, this.altura);
+          this.pushData(nivel);
+          const p = this.getPromedio();
+          console.log(`Nivel: ${p}`);
+          if (p > 0) {
+            this.medidor.progress = p;
+          }
         }
       });
     },
@@ -275,13 +298,14 @@ export default {
       axios
         .get("?data=10&filtro=1s")
         .then((response) => {
-          this.niveles = response.data;
-          this.drawChart();
+          if (response.data.length > 0) {
+            this.niveles = response.data;
+            this.drawChart();
+          }
         })
         .catch((e) => {
           console.log(e.message);
         });
-      
     },
   },
   mounted() {
