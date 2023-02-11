@@ -7,7 +7,7 @@ import axios from "axios";
 
 axios.defaults.withCredentials = false;
 //axios.defaults.baseURL = "http://localhost/niveldeagua/api";//DEV
-axios.defaults.baseURL = "http://181.174.200.66/api";//PROD
+axios.defaults.baseURL = "http://181.174.200.66:8282/api";//PROD
 /*
 axios.interceptors.response.use(undefined, function(error) {
   if (error) {
