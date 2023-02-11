@@ -147,11 +147,12 @@ export default {
       });
     },
     notificacion: function () {
-      this.medidor.borderColor = "#11c53c";
-      setTimeout(()=>{ this.medidor.borderColor = "#00ff00";}, 100);
+      //Notificacion de mensaje recibido
+      this.medidor.borderColor = "#00ff00";
+      setTimeout(()=>{ this.medidor.borderColor = "#11c53c";}, 100);
     },
     getAltura: function (lectura) {
-      // Invertir lectura
+      // Invertir lectura para calcular litros
       if (lectura > 0 && lectura - this.distanciaMin < this.altura) {
         if (lectura > this.distanciaMin) {
           this.alturaReal = this.altura - (lectura - this.distanciaMin);
@@ -163,6 +164,7 @@ export default {
       }
     },
     getNivel: function (lectura, altura) {
+      // Obneter nivel en porcentaje
       this.contadorLectura++;
       var nivel = 0;
       this.getAltura(lectura);
@@ -344,7 +346,7 @@ export default {
         const largo = 500;
         return parseInt((ancho * largo * this.alturaReal) / 100) + " Litros";
       } else {
-        return "-";
+        return "";
       }
     },
   },
