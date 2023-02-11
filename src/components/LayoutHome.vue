@@ -13,7 +13,12 @@
               <div class="d-flex justify-center">
                 <strong>{{ nombre_tanque }}</strong>
               </div>
-              <div class="d-flex justify-center">ALTURA {{ altura }} CM</div>
+              <div class="d-flex justify-center">
+                <div class="text-h6">
+                  {{ getLitros
+                  }}<span class="mdi mdi-plus-minus-variant"></span>
+                </div>
+              </div>
             </v-layout>
           </v-col>
           <v-col class="col-sm-12 col-md-6 col-12">
@@ -29,7 +34,7 @@
         </v-row>
       </v-card-text>
     </v-card>
-    <br>
+    <br />
     <v-card>
       <v-card-title>Historial Nivel de Agua</v-card-title>
       <v-row>
@@ -63,7 +68,9 @@ export default {
     isConectedMqtt: false,
     isReceivedData: false,
     altura: 190,
+    distanciaMin: 68,
     nombre_tanque: "TANQUE 1",
+    alturaReal: 0,
   }),
   methods: {
     showFluid: function () {
@@ -81,9 +88,10 @@ export default {
         borderWidth: 3,
         progressFormatter: (value) => {
           if (value > 0) return value.toFixed(0) + "%";
-          else return "Desconectado";
+          else return "-";
         },
       });
+
       this.medidor.progress = 0;
     },
     conectMqtt: function () {
@@ -111,6 +119,7 @@ export default {
       });
 
       client.on("reconnect", () => {
+        this.medidor.progress = 0;
         this.isConectedMqtt = false;
         console.log("reconnecting...");
       });
@@ -120,7 +129,8 @@ export default {
       });
 
       client.on("message", (topic, message) => {
-         if (topic === "S_T_AGUA") {
+        if (topic === "S_T_AGUA") {
+          this.notificacion();
           this.isReceivedData = true;
           console.log(message.toString());
           const lectura = JSON.parse(new TextDecoder("utf-8").decode(message));
@@ -136,24 +146,38 @@ export default {
         }
       });
     },
+    notificacion: function () {
+      this.medidor.borderColor = "#11c53c";
+      setTimeout(()=>{ this.medidor.borderColor = "#00ff00";}, 100);
+    },
+    getAltura: function (lectura) {
+      // Invertir lectura
+      if (lectura > 0 && lectura - this.distanciaMin < this.altura) {
+        if (lectura > this.distanciaMin) {
+          this.alturaReal = this.altura - (lectura - this.distanciaMin);
+        } else {
+          this.alturaReal = this.altura;
+        }
+      } else {
+        this.alturaReal = 0;
+      }
+    },
     getNivel: function (lectura, altura) {
       this.contadorLectura++;
       var nivel = 0;
-      var distanciaMin = 20;
-
-      if (lectura > altura) {
-        lectura = altura;
+      this.getAltura(lectura);
+      if (lectura - this.distanciaMin > altura) {
+        lectura = altura + this.distanciaMin;
       }
-      if (lectura > distanciaMin) {
-        nivel = 100 - ((lectura - distanciaMin) * 100) / altura;
+      if (lectura > this.distanciaMin) {
+        nivel = 100 - ((lectura - this.distanciaMin) * 100) / altura;
       } else {
-        nivel = 100;
+        nivel = 101;
       }
-
       if (nivel < 1) {
         nivel = 0;
       }
-      this.lecturaAnterior = lectura;
+
       return Math.trunc(nivel);
     },
     getPromedio: function () {
@@ -312,6 +336,26 @@ export default {
     this.showFluid();
     this.conectMqtt();
     this.generateChartData();
+  },
+  computed: {
+    getLitros: function () {
+      if (this.alturaReal > 0 && this.isConectedMqtt) {
+        const ancho = 200;
+        const largo = 500;
+        return parseInt((ancho * largo * this.alturaReal) / 100) + " Litros";
+      } else {
+        return "-";
+      }
+    },
+  },
+  watch: {
+    isConectedMqtt: function (newVal) {
+      if (newVal) {
+        this.medidor.borderColor = "#31a24c";
+      } else {
+        this.medidor.borderColor = "#D9D9D9";
+      }
+    },
   },
 };
 </script>
