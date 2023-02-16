@@ -15,8 +15,7 @@
               </div>
               <div class="d-flex justify-center">
                 <div class="text-h6">
-                  {{ getLitros
-                  }}<span class="mdi mdi-plus-minus-variant"></span>
+                  {{ getLitros }}
                 </div>
               </div>
             </v-layout>
@@ -28,7 +27,11 @@
                 <odometer :val="flujoAgua" />
               </div>
               <br />
-              <div><odometer :val="pulsos" /></div>
+              <span class="text-h6">Litro/Minuto</span>
+              <div><odometert2 :val="LxM" /></div>
+              <br />
+              <span class="text-h6">Litro/Hora</span>
+              <div><odometert2 :val="LxH" /></div>
             </v-layout>
           </v-col>
         </v-row>
@@ -49,6 +52,7 @@
 import { CircularFluidMeter } from "fluid-meter";
 import mqtt from "precompiled-mqtt";
 import OdoMeter from "../components/OdoMeter";
+import OdoMeterT2 from "../components/OdoMeterT2";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
 import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
@@ -57,12 +61,14 @@ export default {
   name: "LayoutHome",
   components: {
     odometer: OdoMeter,
+    odometert2: OdoMeterT2,
   },
   data: () => ({
     medidor: [],
     promedio: [],
     contadorLectura: 0,
-    pulsos: 0,
+    LxM: 0,
+    LxH: 0,
     flujoAgua: 0,
     niveles: [],
     isConectedMqtt: false,
@@ -71,6 +77,7 @@ export default {
     distanciaMin: 68,
     nombre_tanque: "TANQUE 1",
     alturaReal: 0,
+    nivelPorcentaje: 0,
   }),
   methods: {
     showFluid: function () {
@@ -135,13 +142,15 @@ export default {
           console.log(message.toString());
           const lectura = JSON.parse(new TextDecoder("utf-8").decode(message));
           this.flujoAgua = lectura.Litro;
-          this.pulsos = lectura.Pulsos;
+          this.LxM = lectura.LxM;
+          this.LxH = lectura.LxM * 60;
           const nivel = this.getNivel(lectura.distancia, this.altura);
           this.pushData(nivel);
           const p = this.getPromedio();
           console.log(`Nivel: ${p}`);
           if (p > 0) {
             this.medidor.progress = p;
+            this.nivelPorcentaje = p;
           }
         }
       });
@@ -149,7 +158,9 @@ export default {
     notificacion: function () {
       //Notificacion de mensaje recibido
       this.medidor.borderColor = "#00ff00";
-      setTimeout(()=>{ this.medidor.borderColor = "#11c53c";}, 100);
+      setTimeout(() => {
+        this.medidor.borderColor = "#11c53c";
+      }, 100);
     },
     getAltura: function (lectura) {
       // Invertir lectura para calcular litros
@@ -208,6 +219,7 @@ export default {
       let root = am5.Root.new("chartdiv");
 
       root.setThemes([am5themes_Animated.new(root)]);
+      root.dateFormatter.set("dateFormat", "MMM dd, HH:mm");
 
       let chart = root.container.children.push(
         am5xy.XYChart.new(root, {
@@ -223,6 +235,8 @@ export default {
       let yAxis = chart.yAxes.push(
         am5xy.ValueAxis.new(root, {
           maxDeviation: 1,
+          min:0,
+          max: 100,
           renderer: am5xy.AxisRendererY.new(root, { pan: "zoom" }),
         })
       );
@@ -232,7 +246,7 @@ export default {
         am5xy.DateAxis.new(root, {
           groupData: true,
           maxDeviation: 0.5,
-          baseInterval: { timeUnit: "minute", count: 1 },
+          baseInterval: { timeUnit: "second", count: 30 },
           renderer: am5xy.AxisRendererX.new(root, {
             minGridDistance: 50,
             pan: "zoom",
@@ -244,7 +258,7 @@ export default {
 
       // Create series
       let series = chart.series.push(
-        am5xy.LineSeries.new(root, {
+        am5xy.SmoothedXYLineSeries.new(root, {
           name: "Nivel",
           xAxis: xAxis,
           yAxis: yAxis,
@@ -252,7 +266,7 @@ export default {
           valueXField: "fechahora",
           tooltip: am5.Tooltip.new(root, {
             pointerOrientation: "horizontal",
-            labelText: "[bold]{name}[/]\n{valueX.formatDate()}: {valueY}",
+            labelText: "[bold]{name}[/]\n{valueX.formatDate()} - {valueY}",
           }),
         })
       );
@@ -333,18 +347,21 @@ export default {
           console.log(e.message);
         });
     },
+    getDate5minutes: function(){
+      setInterval(()=>{
+        this.generateChartData();
+      },5000);
+    }
   },
   mounted() {
     this.showFluid();
     this.conectMqtt();
-    this.generateChartData();
+    this.getDate5minutes();
   },
   computed: {
     getLitros: function () {
-      if (this.alturaReal > 0 && this.isConectedMqtt) {
-        const ancho = 200;
-        const largo = 500;
-        return parseInt((ancho * largo * this.alturaReal) / 100) + " Litros";
+      if (this.nivelPorcentaje > 0 && this.isConectedMqtt) {
+        return parseInt(this.nivelPorcentaje * 190) + " Litros ~";
       } else {
         return "";
       }
