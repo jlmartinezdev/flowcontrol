@@ -78,6 +78,8 @@ export default {
     nombre_tanque: "TANQUE 1",
     alturaReal: 0,
     nivelPorcentaje: 0,
+    root: [],
+
   }),
   methods: {
     showFluid: function () {
@@ -333,6 +335,7 @@ export default {
         })
       );
       sbseries.data.setAll(data);
+      this.root= root;
     },
     generateChartData: function () {
       axios
@@ -349,13 +352,17 @@ export default {
     },
     getDate5minutes: function(){
       setInterval(()=>{
+        if(this.root){
+          this.root.dispose();
+        }
         this.generateChartData();
-      },5000);
+      },60000*5);
     }
   },
   mounted() {
     this.showFluid();
     this.conectMqtt();
+    this.generateChartData();
     this.getDate5minutes();
   },
   computed: {
